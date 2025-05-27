@@ -3,20 +3,26 @@ const { ytmp3 } = require("./scraper");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.get("/", (req, res) => {
+  res.json({
+    status: true,
+    message: "YTMP3 API by Dinuwh MD",
+    usage: "/ytmp3?url=YOUTUBE_URL"
+  });
+});
+
 app.get("/ytmp3", async (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.status(400).json({ status: false, message: "Missing YouTube URL" });
+  const url = req.query.url;
+  if (!url) return res.status(400).json({ status: false, message: "Missing URL" });
 
   try {
-    const dl = await ytmp3(url);
-    res.json({
-      status: true,
-      creator: "Scraper by Dinuwh",
-      result: dl
-    });
-  } catch (e) {
-    res.status(500).json({ status: false, message: e.message });
+    const data = await ytmp3(url);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ status: false, message: err.message });
   }
 });
 
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});

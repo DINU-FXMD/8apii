@@ -1,4 +1,5 @@
 const axios = require("axios");
+const ytdl = require("ytdl-core");
 
 async function fetchKey(url) {
   try {
@@ -10,13 +11,12 @@ async function fetchKey(url) {
           'Content-Type': 'application/json',
           'Origin': 'https://yt.savetube.me',
           'Referer': 'https://yt.savetube.me/',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+          'User-Agent': 'Mozilla/5.0'
         }
       }
     );
     return response.data?.data?.key || null;
-  } catch (error) {
-    console.error("Key fetch error:", error.message);
+  } catch {
     return null;
   }
 }
@@ -25,23 +25,18 @@ async function fetchDownloadLink(key, type = "audio", quality = "128") {
   try {
     const response = await axios.post(
       "https://cdn61.savetube.su/download",
-      {
-        key,
-        downloadType: type,
-        quality,
-      },
+      { key, downloadType: type, quality },
       {
         headers: {
           'Content-Type': 'application/json',
           'Origin': 'https://yt.savetube.me',
           'Referer': 'https://yt.savetube.me/',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+          'User-Agent': 'Mozilla/5.0'
         }
       }
     );
     return response.data?.data?.downloadUrl || null;
-  } catch (error) {
-    console.error("Download fetch error:", error.message);
+  } catch {
     return null;
   }
 }
@@ -53,7 +48,41 @@ async function ytmp3(query) {
   const dl_link = await fetchDownloadLink(key, "audio", "128");
   if (!dl_link) throw new Error("Failed to get download link");
 
-  return { dl_link };
+  const info = await ytdl.getInfo(query);
+  const videoDetails = info.videoDetails;
+
+  return {
+    status: true,
+    creator: "Manul Official",
+    metadata: {
+      type: "video",
+      videoId: videoDetails.videoId,
+      url: videoDetails.video_url,
+      title: videoDetails.title,
+      description: videoDetails.description,
+      image: videoDetails.thumbnails.pop().url,
+      thumbnail: videoDetails.thumbnails.pop().url,
+      seconds: parseInt(videoDetails.lengthSeconds),
+      timestamp: new Date(parseInt(videoDetails.lengthSeconds) * 1000).toISOString().substr(14, 5),
+      duration: {
+        seconds: parseInt(videoDetails.lengthSeconds),
+        timestamp: new Date(parseInt(videoDetails.lengthSeconds) * 1000).toISOString().substr(14, 5),
+      },
+      ago: videoDetails.publishDate || "Unknown",
+      views: parseInt(videoDetails.viewCount),
+      author: {
+        name: videoDetails.author.name,
+        url: videoDetails.author.channel_url,
+      }
+    },
+    download: {
+      status: true,
+      quality: "128kbps",
+      availableQuality: [92, 128, 256, 320],
+      url: dl_link,
+      filename: `${videoDetails.title} (128kbps).mp3`
+    }
+  };
 }
 
 module.exports = { ytmp3 };
